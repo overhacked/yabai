@@ -55,6 +55,38 @@ void rule_apply(struct rule *rule)
     }
 }
 
+void rule_merge_actions(struct rule *from, struct rule *to)
+{
+    // Do not merge rule filters
+    to->follow_space = from->follow_space;
+    if (from->did)
+        to->did = from->did;
+    if (from->sid)
+        to->sid = from->sid;
+    if (in_range_ei(from->alpha, 0.0f, 1.0f))
+        to->alpha = from->alpha;
+    if (from->manage != RULE_PROP_UD)
+        to->manage = from->manage;
+    if (from->sticky != RULE_PROP_UD)
+        to->sticky = from->sticky;
+    if (from->mff != RULE_PROP_UD)
+        to->mff = from->mff;
+    if (from->layer)
+        to->layer = from->layer;
+    if (from->border != RULE_PROP_UD)
+        to->border = from->border;
+    if (from->fullscreen != RULE_PROP_UD)
+        to->fullscreen = from->fullscreen;
+    if (from->grid[0] != 0 && from->grid[1] != 0) {
+        to->grid[0] = from->grid[0];
+        to->grid[1] = from->grid[1];
+        to->grid[2] = from->grid[2];
+        to->grid[3] = from->grid[3];
+        to->grid[4] = from->grid[4];
+        to->grid[5] = from->grid[5];
+    }
+}
+
 bool rule_remove_by_index(int index)
 {
     for (int i = 0; i < buf_len(g_window_manager.rules); ++i) {

@@ -33,6 +33,7 @@ void rule_serialize(FILE *rsp, struct rule *rule, int index);
 bool rule_remove_by_index(int index);
 bool rule_remove(char *label);
 void rule_add(struct rule *rule);
+void rule_merge_actions(struct rule *from, struct rule *to);
 void rule_destroy(struct rule *rule);
 
 #endif
