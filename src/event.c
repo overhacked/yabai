@@ -589,7 +589,8 @@ static EVENT_CALLBACK(EVENT_HANDLER_WINDOW_RESIZED)
         return EVENT_FAILURE;
     }
 
-    debug("%s: %s %d\n", __FUNCTION__, window->application->name, window->id);
+    debug("%s: %s %d %.2fx%.2f -> %.2fx%.2f\n", __FUNCTION__, window->application->name, window->id,
+          window->frame.size.height, window->frame.size.width, new_frame.size.height, new_frame.size.width);
     event_signal_push(SIGNAL_WINDOW_RESIZED, window);
 
     bool was_fullscreen = window_check_flag(window, WINDOW_FULLSCREEN);
@@ -601,6 +602,8 @@ static EVENT_CALLBACK(EVENT_HANDLER_WINDOW_RESIZED)
         window_clear_flag(window, WINDOW_FULLSCREEN);
     }
 
+    float dw = window->frame.size.width - new_frame.size.width;
+    float dh = window->frame.size.height - new_frame.size.height;
     window->frame = new_frame;
 
     if (!was_fullscreen && is_fullscreen) {
@@ -626,6 +629,21 @@ static EVENT_CALLBACK(EVENT_HANDLER_WINDOW_RESIZED)
     } else if (!was_fullscreen == !is_fullscreen) {
         if (g_mouse_state.current_action == MOUSE_MODE_MOVE && g_mouse_state.window == window) {
             g_mouse_state.window_frame.size = g_mouse_state.window->frame.size;
+        }
+
+        if (g_mouse_state.last_resized_window_id == window->id) {
+            struct view *view = window_manager_find_managed_window(&g_window_manager, window);
+            double seconds_since_last_up = CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateCombinedSessionState, kCGEventLeftMouseUp);
+            if (view && seconds_since_last_up < 0.5f) {
+                debug("%s: %s %d, caught late WINDOW_RESIZED event %.3fs after MOUSE_UP\n", __FUNCTION__, window->application->name, window->id, seconds_since_last_up);
+                g_mouse_state.last_resized_window_id = 0;
+                uint8_t direction = 0;
+                if (dw != 0.0f) direction |= HANDLE_RIGHT;
+                if (dh != 0.0f) direction |= HANDLE_BOTTOM;
+                if (window_manager_resize_window_relative(&g_window_manager, window, direction, dw, dh) == WINDOW_OP_ERROR_INVALID_DST_NODE) {
+                    return EVENT_FAILURE;
+                }
+            }
         }
     }
 
@@ -1054,6 +1072,7 @@ static EVENT_CALLBACK(EVENT_HANDLER_MOUSE_UP)
         }
     } else {
         mouse_drop_try_adjust_bsp_grid(&g_window_manager, src_view, g_mouse_state.window, &info);
+        g_mouse_state.last_resized_window_id = g_mouse_state.window->id;
     }
 
 err:
